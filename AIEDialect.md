@@ -195,7 +195,7 @@ Declare a dma block descriptor op
 Syntax:
 
 ```
-operation ::= `AIE.dmaBd` `(` `<` $buffer  `:` type($buffer) `,` $offset `,` $len `>` `,` $AB `)` attr-dict
+operation ::= `AIE.dmaBd` `(` `<` $buffer  `:` type($buffer) `,` $offset `,` $len `>` `,` $AB (`,` $dimensions^ )? `)` attr-dict
 ```
 
 This operation describes a block descriptor for DMA operations. In particular, it specifies
@@ -222,6 +222,30 @@ Example:
 A DMA channel in a Memory Module can process one block descriptor after another by chaining them.
 There are 16 block descriptors per Memory Module. They are shared by four DMA channels.
 
+On AIE-ML devices, an optional argument can be used to specify an array of 
+step sizes and wraps to move data in more advanced patterns. Strides and
+wraps are specified as tuples `<stride, wrap>`, and up to three dimensions
+can be specified (or up to four dimensions on memtiles). 
+
+The first element of the array gives the _highest-dimension_ stride and
+wrap, the last element of the array gives the lowest-dimension.
+
+Example:
+
+```
+AIE.dmaBd(<%buf : memref<128xi32>, 0, 128>, 0, [<16, 8>, <1, 2>, <2, 8>])
+```
+
+This corresponds to alternating between even and odd elements of the 
+buffer/stream every 8 elements, like so, equivalent to nested loops like so:
+
+```
+for(int i = 0; i < 8 /* wrap[0] */; i++)
+  for(int j = 0; j < 2 /* wrap[1] */; j++)
+    for(int k = 0; k < 8 /* wrap[2] */; k++)
+      // access/store element at/to index (i * 16 + j * 1 + k * 2)
+```
+
 #### Attributes:
 
 | Attribute | MLIR Type | Description |
@@ -229,6 +253,7 @@ There are 16 block descriptors per Memory Module. They are shared by four DMA ch
 | `offset` | ::mlir::IntegerAttr | 32-bit signless integer attribute
 | `len` | ::mlir::IntegerAttr | 32-bit signless integer attribute
 | `AB` | ::mlir::IntegerAttr | 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 1
+| `dimensions` | ::xilinx::AIE::DimTupleArrayAttr | 
 
 #### Operands:
 
@@ -835,6 +860,8 @@ Example:
 ```
 This operation creates an objectFifo between %tile12, %tile13 and %tile23 of 4 elements, each a buffer of 16 32-bit integers.
 
+Interfaces: Symbol
+
 #### Attributes:
 
 | Attribute | MLIR Type | Description |
@@ -874,9 +901,9 @@ In L1, only objectFifos of same size may be linked. In L2, different sized objec
 
 Example:
 ```
-  %of_t70_t72 = AIE.objectFifo.createObjectFifo(%t70, {%t72}, 2) {sym_name = "of0"} : !AIE.objectFifo<memref<64xi16>>
-  %of_t72_t74 = AIE.objectFifo.createObjectFifo(%t72, {%t74}, 2) {sym_name = "of1"} : !AIE.objectFifo<memref<64xi16>>
-  AIE.objectFifo.link({%of_t70_t72}, {%of_t72_t74}) : ({!AIE.objectFifo<memref<64xi16>>}, {!AIE.objectFifo<memref<64xi16>>})
+  %of_t70_t72 = AIE.objectFifo.createObjectFifo(%t70, { %t72 }, 2) {sym_name = "of0"} : !AIE.objectFifo<memref<64xi16>>
+  %of_t72_t74 = AIE.objectFifo.createObjectFifo(%t72, { %t74 }, 2) {sym_name = "of1"} : !AIE.objectFifo<memref<64xi16>>
+  AIE.objectFifo.link({ %of_t70_t72 }, { %of_t72_t74 }) : ({!AIE.objectFifo<memref<64xi16>>}, {!AIE.objectFifo<memref<64xi16>>})
 ```
 This operation links two objectFifos which have tile %t72 as a link point.
 
@@ -1324,20 +1351,20 @@ Example:
 ```
   %tile00 = AIE.tile(0, 0)
   %tile02 = AIE.tile(0, 2)
-  %connect1 = AIE.objectFifo.createObjectFifo(%tile00, {%tile02}, 2) {sym_name = "of_in_0"} : !AIE.objectFifo<memref<64xi16>>
+  %connect1 = AIE.objectFifo.createObjectFifo(%tile00, { %tile02 }, 2) {sym_name = "of_in_0"} : !AIE.objectFifo<memref<64xi16>>
 ```
 could produce the following allocation info (channel direction MM2S, channel index 1, and shim column 0):
 ```
   AIE.shimDMAAllocation("of_in_0", MM2S, 1, 0)
 ```
 
-Traits: HasParent<ModuleOp>
+Traits: HasParent<DeviceOp>
 
 #### Attributes:
 
 | Attribute | MLIR Type | Description |
 | :-------: | :-------: | ----------- |
-| `sym_name` | ::mlir::StringAttr | string attribute
+| `sym_name` | ::mlir::FlatSymbolRefAttr | flat symbol reference attribute
 | `channelDir` | xilinx::AIE::DMAChannelDirAttr | DMA Channel direction
 | `channelIndex` | ::mlir::IntegerAttr | 64-bit signless integer attribute
 | `col` | ::mlir::IntegerAttr | 64-bit signless integer attribute
@@ -1600,6 +1627,48 @@ represented by an [aie.tile](#aietile-aietileop) operation.
 | :-----: | ----------- |
 | `source` | index
 | `dest` | index
+
+## Attribute definition
+
+### DimTupleArrayAttr
+
+
+
+Syntax:
+
+```
+#AIE.DimTupleArray<
+  ::llvm::ArrayRef<::xilinx::AIE::DimTupleAttr>   # value
+>
+```
+
+
+#### Parameters:
+
+| Parameter | C++ type | Description |
+| :-------: | :-------: | ----------- |
+| value | `::llvm::ArrayRef<::xilinx::AIE::DimTupleAttr>` |  |
+
+### DimTupleAttr
+
+Tuple encoding the stride and wrap of one dimension in an AIE2 n-dimensional buffer descriptor
+
+Syntax:
+
+```
+#AIE.DimTuple<
+  uint32_t,   # stepsize
+  uint16_t   # wrap
+>
+```
+
+
+#### Parameters:
+
+| Parameter | C++ type | Description |
+| :-------: | :-------: | ----------- |
+| stepsize | `uint32_t` |  |
+| wrap | `uint16_t` |  |
 
 ## Type constraint definition
 
