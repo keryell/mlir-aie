@@ -12,7 +12,7 @@
 // RUN: not aiecc.py --no-xchesscc --no-xbridge %s |& FileCheck %s --check-prefix=PEANO
 
 // CHESS: Error: could not find free space for SpaceSymbol x in memory DMb
-// PEANO: ld.lld: error: section '.bss' will not fit in region 'data': overflowed by 4 bytes
+// PEANO: lld: error: section '.bss' will not fit in region 'data': overflowed by 4 bytes
 
 // REQUIRES: chess
 // REQUIRES: peano

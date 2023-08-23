@@ -140,7 +140,7 @@ tools = [
     'aie-opt',
     'aie-translate',
     'aiecc.py',
-    'ld.lld',
+    'lld',
     'llc',
     'llvm-objdump',
     'opt',
