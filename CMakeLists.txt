@@ -45,16 +45,6 @@ if(POLICY CMP0116)
   cmake_policy(SET CMP0116 OLD)
 endif()
 
-project(AIE LANGUAGES CXX C)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED YES)
-
-# Disables generation of "version soname" (i.e. libFoo.so.<version>), which
-# causes pure duplication as part of Python wheels.
-set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
-
-
 set(AIE_COMPILER
     "XCHESSCC"
     CACHE STRING "Backend compiler selection")
@@ -73,8 +63,31 @@ option(LLVM_BUILD_TOOLS
        "Build the LLVM tools. If OFF, just generate build targets." ON)
 option(AIE_INCLUDE_INTEGRATION_TESTS
        "Generate build targets for the mlir-aie integration tests." OFF)
+set(MLIR_BINARY_DIR ${CMAKE_BINARY_DIR})
 
-find_package(MLIR REQUIRED CONFIG)
+# If this is compiled as an independent project
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  project(AIE LANGUAGES CXX C)
+
+  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD_REQUIRED YES)
+
+  # Disables generation of "version soname" (i.e. libFoo.so.<version>), which
+  # causes pure duplication as part of Python wheels.
+  set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
+
+  message(STATUS "Searching for MLIRConfig.cmake in: ${MLIR_DIR}")
+  find_package(MLIR REQUIRED CONFIG)
+else ()
+  set(LLVM_SOURCE_DIR ${LLVM_MAIN_SRC_DIR})
+  set(MLIR_MAIN_SRC_DIR ${LLVM_MAIN_SRC_DIR}/../mlir)
+  set(MLIR_INCLUDE_DIRS ${MLIR_MAIN_SRC_DIR}/include)
+  set(MLIR_CMAKE_DIR ${MLIR_MAIN_SRC_DIR}/cmake/modules)
+  set(MLIR_TABLEGEN_EXE $<TARGET_FILE:mlir-tblgen>)
+  set(PROJECT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+  set(MLIR_TABLEGEN_OUTPUT_DIR ${LLVM_BINARY_DIR}/tools/mlir/include)
+  include_directories(${MLIR_TABLEGEN_OUTPUT_DIR})
+endif ()
 
 message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
