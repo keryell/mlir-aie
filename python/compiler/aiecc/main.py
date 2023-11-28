@@ -98,7 +98,6 @@ class flow_runner:
       if self.opts.verbose:
         print("Running:", pass_pipeline)
       with Context() as ctx, Location.unknown():
-        aiedialect.register_dialect(ctx)
         module = Module.parse(mlir_module_str)
         PassManager.parse(pass_pipeline).run(module.operation)
         mlir_module_str = str(module)
@@ -263,7 +262,6 @@ class flow_runner:
   async def emit_design_partition_json(self, output_filename, kernel_id='0x901'):
 
     with Context() as ctx, Location.unknown():
-      aiedialect.register_dialect(ctx)
       with open(self.file_with_addresses, 'r') as f:
           mlir_module = Module.parse(f.read())
 
@@ -395,12 +393,11 @@ all:
 
       install_path = aie.compiler.aiecc.configure.install_path()
       data_path = os.path.join(install_path, "data")
-      shutil.copytree(data_path, self.tmpdirname, dirs_exist_ok=True)
 
       runtime_xaiengine_path = os.path.join(install_path, 'runtime_lib',
                                             opts.host_target.split('-')[0], 'xaiengine', 'cdo')
       xaiengine_include_path = os.path.join(runtime_xaiengine_path, "include")
-      xaiengine_lib_path = os.path.join(runtime_xaiengine_path, "lib")
+      xaiengine_lib_path = os.path.join(runtime_xaiengine_path)
 
       for elf in glob.glob('*.elf'):
         shutil.copy(elf, self.tmpdirname)
@@ -421,14 +418,14 @@ all:
                                '-I' + xaiengine_include_path,
                                '-I' + os.path.join(opts.aietools_path, "include"),
                                '-o', os.path.join(self.tmpdirname, 'gen_cdo.o'),
-                               os.path.join(self.tmpdirname, 'generated-source/gen_cdo.cpp')])
+                               os.path.join(data_path, 'generated-source/gen_cdo.cpp')])
       p1 = self.do_call(task, ['clang++',
                                '-fPIC', '-c', '-std=c++17',
                                '-I' + self.tmpdirname,
                                '-I' + xaiengine_include_path,
                                '-I' + os.path.join(opts.aietools_path, "include"),
                                '-o', os.path.join(self.tmpdirname, 'cdo_main.o'),
-                               os.path.join(self.tmpdirname, 'generated-source/cdo_main.cpp')])
+                               os.path.join(data_path, 'generated-source/cdo_main.cpp')])
       await asyncio.gather(p0, p1)
       await self.do_call(task, ['clang++',
                                 '-L' + xaiengine_lib_path,
@@ -461,7 +458,7 @@ all:
                                 '-o', os.path.join(self.tmpdirname,'design.pdi'),
                                 '-w'])
       await self.do_call(task, ['xclbinutil',
-                                '--input' , os.path.join(self.tmpdirname,'1x4.xclbin'),
+                                '--input' , os.path.join(data_path,'1x4.xclbin'),
                                 '--add-kernel', os.path.join(self.tmpdirname,'kernels.json'),
                                 '--add-replace-section',
                                 'AIE_PARTITION:JSON:'+os.path.join(self.tmpdirname,'aie_partition.json'),
@@ -809,7 +806,6 @@ def main():
 
   try:
     with Context() as ctx, Location.unknown():
-      aiedialect.register_dialect(ctx)
       with open(opts.filename, 'r') as f:
         module = Module.parse(f.read())
       module_str = str(module)
