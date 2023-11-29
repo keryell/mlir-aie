@@ -69,27 +69,19 @@ option(LLVM_BUILD_TOOLS
 option(AIE_INCLUDE_INTEGRATION_TESTS
        "Generate build targets for the mlir-aie integration tests." OFF)
 
-# If this is compiled as an independent project
+# Disables generation of "version soname" (i.e. libFoo.so.<version>), which
+# causes pure duplication as part of Python wheels.
+#set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
+
 if (PROJECT_IS_TOP_LEVEL)
+  # If this is compiled as an independent project
   message(STATUS "${PROJECT_NAME} out-of-tree build.")
-
-  # Disables generation of "version soname" (i.e. libFoo.so.<version>), which
-  # causes pure duplication as part of Python wheels.
-  set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
-
-  message(STATUS "Searching for MLIRConfig.cmake in: ${MLIR_DIR}")
+  # The location to search for can be set with MLIR_DIR and LLVM_DIR
   find_package(MLIR REQUIRED CONFIG)
 else ()
-  # Set variables normally set by MLIRConfig.cmake
-  set(LLVM_SOURCE_DIR ${LLVM_MAIN_SRC_DIR})
-  set(MLIR_MAIN_SRC_DIR ${LLVM_MAIN_SRC_DIR}/../mlir)
-  set(MLIR_INCLUDE_DIRS ${MLIR_MAIN_SRC_DIR}/include)
-  set(MLIR_CMAKE_DIR ${MLIR_MAIN_SRC_DIR}/cmake/modules)
-  # Useful?
-  set(MLIR_TABLEGEN_OUTPUT_DIR ${LLVM_BINARY_DIR}/tools/mlir/include)
-  include_directories(${MLIR_TABLEGEN_OUTPUT_DIR})
+  # Reuse local MLIR cmake configuration file
+  find_package(MLIR REQUIRED CONFIG HINTS ${CMAKE_BINARY_DIR}/lib/cmake/mlir)
 endif ()
-
 message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
