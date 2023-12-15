@@ -47,9 +47,6 @@ endif()
 
 project(AIE LANGUAGES CXX C)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED YES)
-
 set(AIE_COMPILER
     "XCHESSCC"
     CACHE STRING "Backend compiler selection")
@@ -63,9 +60,6 @@ set(PEANO_INSTALL_DIR
     "<unset>"
     CACHE STRING "Location of Peano compiler")
 
-option(LLVM_INCLUDE_TOOLS "Generate build targets for the LLVM tools." ON)
-option(LLVM_BUILD_TOOLS
-       "Build the LLVM tools. If OFF, just generate build targets." ON)
 option(AIE_INCLUDE_INTEGRATION_TESTS
        "Generate build targets for the mlir-aie integration tests." OFF)
 
@@ -76,6 +70,14 @@ option(AIE_INCLUDE_INTEGRATION_TESTS
 if (PROJECT_IS_TOP_LEVEL)
   # If this is compiled as an independent project
   message(STATUS "${PROJECT_NAME} out-of-tree build.")
+
+  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD_REQUIRED YES)
+
+  option(LLVM_INCLUDE_TOOLS "Generate build targets for the LLVM tools." ON)
+  option(LLVM_BUILD_TOOLS
+       "Build the LLVM tools. If OFF, just generate build targets." ON)
+
   # The location to search for can be set with MLIR_DIR and LLVM_DIR
   find_package(MLIR REQUIRED CONFIG)
 else ()
