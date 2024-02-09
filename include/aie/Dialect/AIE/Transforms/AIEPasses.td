@@ -41,7 +41,7 @@ def AIECanonicalizeDevice : Pass<"aie-canonicalize-device", "mlir::ModuleOp"> {
   let description = [{
     This pass inserts a toplevel device operation in designs that do not have one.
     This allows us to support backwards compatability for older models targetting the VC1902
-    device without explicit device operations. 
+    device without explicit device operations.
   }];
 
   let constructor = "xilinx::AIE::createAIECanonicalizeDevicePass()";
@@ -119,7 +119,7 @@ def AIERoutePathfinderFlows : Pass<"aie-create-pathfinder-flows", "DeviceOp"> {
   let summary = "Route aie.flow operations through switchboxes with Pathfinder algorithm";
   let description = [{
     Replace each aie.flow operation with an equivalent set of aie.switchbox and aie.wire
-    operations. Uses Pathfinder congestion-aware algorithm. 
+    operations. Uses Pathfinder congestion-aware algorithm.
   }];
 
   let constructor = "xilinx::AIE::createAIEPathfinderPass()";
@@ -132,7 +132,7 @@ def AIERoutePacketFlows : Pass<"aie-create-packet-flows", "DeviceOp"> {
   let summary = "Route aie.packetflow operations through switchboxes";
   let description = [{
     Replace each aie.packetflow operation with an equivalent set of aie.switchbox and aie.wire
-    operations.  
+    operations.
   }];
 
   let constructor = "xilinx::AIE::createAIERoutePacketFlowsPass()";
@@ -171,16 +171,16 @@ def AIEVectorOpt : Pass<"aie-vector-opt", "mlir::func::FuncOp"> {
 def AIEObjectFifoStatefulTransform : Pass<"aie-objectFifo-stateful-transform", "DeviceOp"> {
   let summary = "Instantiate the buffers and locks of aie.objectFifo.createObjectFifo operations";
   let description = [{
-    Replace each aie.objectFifo.createObjectFifo operation with aie.buffer and aie.lock operations in the 
+    Replace each aie.objectFifo.createObjectFifo operation with aie.buffer and aie.lock operations in the
     producer tile. Convert aie.objectFifo.acquire, aie.objectFifo.release and aie.objectFifo.subviewAccess
     operations into useLock operations by keeping track of acquire/release operations on each objectFifo by
     each process.
 
-    If the producer and consumer tiles of an aie.objectFifo.createObjectFifo operation are not adjacent, the 
+    If the producer and consumer tiles of an aie.objectFifo.createObjectFifo operation are not adjacent, the
     pass also establised aie.flow and aie.dma operations to enable communication between the tiles.
     Extend the body of each loop that contains operations on objectFifos such that it is unrolled
-    based on the number of elements in the objectFifos. If the number of iterations of the loop 
-    cannot be divided pefectly by the unrolling factor, the pass duplicates the loop body after 
+    based on the number of elements in the objectFifos. If the number of iterations of the loop
+    cannot be divided pefectly by the unrolling factor, the pass duplicates the loop body after
     the original loop.
   }];
 
@@ -197,7 +197,7 @@ def AIEObjectFifoStatefulTransform : Pass<"aie-objectFifo-stateful-transform", "
 def AIEObjectFifoRegisterProcess : Pass<"aie-register-objectFifos", "DeviceOp"> {
   let summary = "Generate acquire/release patterns for producer/consumer processes registered to an objectFifo";
   let description = [{
-    Generate acquire/release patterns in the CoreOps of associated cores for each 
+    Generate acquire/release patterns in the CoreOps of associated cores for each
     aie.objectfifo.register_process operation. Patterns are generated as for loops
     of different sizes depending on input patterns.
   }];
@@ -211,4 +211,17 @@ def AIEObjectFifoRegisterProcess : Pass<"aie-register-objectFifos", "DeviceOp"> 
   ];
 }
 
-#endif
+def AIEUseAIEppEmulation : Pass<"aie-use-aie++-emulation", "DeviceOp"> {
+  let summary = "Generate call to AIE++ emulation infrastructure";
+  let description = [{
+    Some operations are replaced by some emulation calls.
+  }];
+
+  let constructor = "xilinx::AIE::createAIEUseAIEppEmulationPass()";
+  let dependentDialects = [
+    "mlir::emitc::EmitCDialect",
+    "xilinx::AIE::AIEDialect",
+  ];
+}
+
+#endif // AIE_PASSES
