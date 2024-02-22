@@ -41,7 +41,7 @@ std::unique_ptr<mlir::OperationPass<DeviceOp>>
 createAIEObjectFifoStatefulTransformPass();
 std::unique_ptr<mlir::OperationPass<DeviceOp>>
 createAIEObjectFifoRegisterProcessPass();
-std::unique_ptr<mlir::OperationPass<DeviceOp>>
+std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 createAIEUseAIEppEmulationPass();
 
 /// Generate the code for registering passes.

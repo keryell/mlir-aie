@@ -211,7 +211,7 @@ def AIEObjectFifoRegisterProcess : Pass<"aie-register-objectFifos", "DeviceOp"> 
   ];
 }
 
-def AIEUseAIEppEmulation : Pass<"aie-use-aie++-emulation", "DeviceOp"> {
+def AIEUseAIEppEmulation : Pass<"aie-use-aie++-emulation", "mlir::ModuleOp"> {
   let summary = "Generate call to AIE++ emulation infrastructure";
   let description = [{
     Some operations are replaced by some emulation calls.
